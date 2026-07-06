@@ -13,6 +13,11 @@ pub enum Action {
 }
 
 pub fn apply(action: Action, groups: &mut [Vec<PathBuf>]) {
+    if groups.is_empty() {
+        println!("no duplicates found");
+        return;
+    }
+
     // Deterministic keeper: sort each group, first path wins.
     // Also gives stable output ordering across runs.
     for group in groups.iter_mut() {
@@ -27,10 +32,6 @@ pub fn apply(action: Action, groups: &mut [Vec<PathBuf>]) {
 }
 
 fn report(groups: &[Vec<PathBuf>]) {
-    if groups.is_empty() {
-        println!("no duplicates found");
-        return;
-    }
     for group in groups {
         println!("{} identical files:", group.len());
         for path in group {

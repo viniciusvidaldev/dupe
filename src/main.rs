@@ -6,6 +6,7 @@ mod walker;
 use clap::Parser;
 use std::{
     collections::{HashMap, HashSet},
+    fs,
     os::unix::fs::MetadataExt,
     path::PathBuf,
     process::ExitCode,
@@ -34,6 +35,21 @@ struct Args {
 
 fn main() -> ExitCode {
     let args = Args::parse();
+
+    match fs::metadata(&args.path) {
+        Ok(m) if m.is_dir() => {}
+        Ok(_) => {
+            eprintln!("{} is not a directory", args.path.display());
+            return ExitCode::FAILURE;
+        }
+        Err(e) => {
+            eprintln!("could not open {}: {e}", args.path.display());
+            return ExitCode::FAILURE;
+        }
+    }
+
+    eprintln!("warning: do not modify files in the scanned directories while dupe is running");
+
     let walker = FileWalker::new(args.path);
 
     let mut map: HashMap<u64, Vec<PathBuf>> = HashMap::new();
@@ -47,7 +63,9 @@ fn main() -> ExitCode {
                 continue;
             }
         };
-        let meta = match file.metadata() {
+        // Follow symlinks: we want the target's inode and size,
+        // not the symlink's. DirEntry::metadata uses lstat.
+        let meta = match fs::metadata(file.path()) {
             Ok(m) => m,
             Err(e) => {
                 eprintln!("could not read {} metadata: {e}", file.path().display());
@@ -70,7 +88,7 @@ fn main() -> ExitCode {
     // rule out files with unique size
     map.retain(|_, v| v.len() > 1);
     if map.is_empty() {
-        println!("no duplicate candidates found");
+        println!("no duplicates found");
         return ExitCode::SUCCESS;
     }
 

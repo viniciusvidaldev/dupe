@@ -53,8 +53,14 @@ Keeps the first file in each group and removes the rest.
 dupe ~/Downloads --action delete
 ```
 
+## Do not modify files during a run
+
+Files are hashed once during the scan, and the chosen action runs afterwards using those results. Nothing is reverified before delete or hardlink. If you change a file between the two steps, `delete` can remove a file that no longer matches the keeper, and `hardlink` can replace an edited file with a link to old content. Let the run finish before touching anything under the scanned tree.
+
 ## Notes
 
 The thread count comes from `std::thread::available_parallelism`, capped by the number of candidate files. If the syscall fails it falls back to 4.
 
 BLAKE3 was chosen because it's fast and has a good streaming API.
+
+Symlinks to files are followed and deduped against their targets. Symlinks to directories are not traversed, so the walk never loops.

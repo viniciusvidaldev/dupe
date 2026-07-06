@@ -54,7 +54,22 @@ impl Iterator for FileWalker {
                 return Some(Ok(entry));
             }
 
-            continue; // not file nor dir, but still some entry
+            // Symlinks: resolve the target and include it if it points
+            // at a real file. We never traverse into symlinked
+            // directories, to keep the walk loop-free without having
+            // to track visited inodes across the whole scan.
+            if file_type.is_symlink() {
+                match fs::metadata(entry.path()) {
+                    Ok(m) if m.is_file() => return Some(Ok(entry)),
+                    Ok(_) => continue, // dir or other, skip
+                    Err(e) => {
+                        eprintln!("skipping broken symlink {}: {e}", entry.path().display());
+                        continue;
+                    }
+                }
+            }
+
+            continue; // some entry that isn't a file, dir, or symlink
         }
 
         None
