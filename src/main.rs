@@ -60,6 +60,10 @@ fn main() -> ExitCode {
             continue;
         }
 
+        if meta.len() == 0 {
+            continue;
+        }
+
         map.entry(meta.len()).or_default().push(file.path());
     }
 
